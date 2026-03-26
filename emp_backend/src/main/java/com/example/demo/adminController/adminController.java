@@ -11,20 +11,17 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.adminModel.adminModel;
 import com.example.demo.adminRepository.adminRepository;
 
-
 @RestController
-@RequestMapping("/api/v1/")
+@RequestMapping("/api/")
 public class adminController {
-	
-	
+
 	@Autowired
 	private adminRepository repo;
 
-	
-	//get all 
-	
+	// get all
+
 	@GetMapping("/admin")
-	public List <adminModel> getAllAdmins(){
+	public List<adminModel> getAllAdmins() {
 		return repo.findAll();
 	}
 }
