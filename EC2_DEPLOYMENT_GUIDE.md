@@ -7,8 +7,7 @@
 3. **Nginx** installed on EC2
 4. **Java 21** installed on EC2
 5. **SSH key pair** for EC2 access
-
----
+---------------------------------
 
 ## Step 1: Configure GitHub Secrets
 
