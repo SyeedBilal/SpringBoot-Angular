@@ -155,23 +155,26 @@ jobs:
       # (scp inside an ssh-action script block does not work — the runner
       #  is not inside the EC2 shell, so it can't reach itself via scp)
       - name: Copy backend JAR to EC2
-        run: |
-          # Write key using printf to preserve newlines correctly
-          printf '%s' "${{ secrets.EC2_PRIVATE_KEY }}" > /tmp/ec2_key.pem
-          chmod 600 /tmp/ec2_key.pem
+       run: |
+        # Use quotes to preserve the block structure of the key
+        cat <<EOF > /tmp/ec2_key.pem
+        ${{ secrets.EC2_PRIVATE_KEY }}
+        EOF
+        
+        chmod 600 /tmp/ec2_key.pem
 
-          # Verify key loaded correctly before attempting connection
-          ssh-keygen -y -f /tmp/ec2_key.pem > /dev/null && echo "✅ Key is valid" || echo "❌ Key is invalid"
+        # Check if the key is actually readable
+        ls -l /tmp/ec2_key.pem
+        cat /tmp/ec2_key.pem
 
-          APP_HOME="/home/${{ secrets.EC2_USER }}/employee-app"
+        APP_HOME="/home/${{ secrets.EC2_USER }}/employee-app"
 
-          ssh -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
-            "mkdir -p $APP_HOME/backend $APP_HOME/frontend"
-
-          scp -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem \
-            ${{ steps.jar.outputs.path }} \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:$APP_HOME/backend/${{ steps.jar.outputs.name }}
+        # Combined SSH and SCP logic
+        ssh -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p $APP_HOME/backend $APP_HOME/frontend"
+        
+        scp -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem \
+          ./backend-artifacts/*.jar \
+          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:$APP_HOME/backend/
 
       - name: Copy frontend dist to EC2
         run: |
