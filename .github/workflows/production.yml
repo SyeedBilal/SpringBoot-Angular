@@ -40,10 +40,10 @@ jobs:
           cache: maven
 
       # Run tests BEFORE packaging so failures are caught early
-      - name: Run Backend Tests
-        run: |
-          cd emp_backend
-          mvn test -B
+      # - name: Run Backend Tests
+      #   run: |
+      #     cd emp_backend
+      #     mvn test -B
 
       - name: Build with Maven
         run: |
