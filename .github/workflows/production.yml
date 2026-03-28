@@ -3,7 +3,7 @@ name: Production Deployment
 on:
   push:
     branches:
-      - main
+      - github-actions-no-docker
   workflow_dispatch:
     inputs:
       action:
