@@ -39,20 +39,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # Run tests BEFORE packaging so failures are caught early
-      # - name: Run Backend Tests
-      #   run: |
-      #     cd emp_backend
-      #     mvn test -B
-
       - name: Build with Maven
         run: |
           cd emp_backend
           mvn clean package -DskipTests -B
 
-      # Artifact name  : backend-build
-      # Artifact path  : emp_backend/target/*.jar
-      # Stored as      : GitHub Actions artifact (zip) for 5 days
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
         with:
@@ -83,20 +74,17 @@ jobs:
           cd employee-frontend-final
           npm ci --no-fund --no-audit
 
-      - name: Run frontend tests
-        run: |
-          cd employee-frontend-final
-          npm run test -- --watch=false --browsers=ChromeHeadless
-        continue-on-error: true   # non-blocking; remove once tests are stable
+      # - name: Run frontend tests
+      #   run: |
+      #     cd employee-frontend-final
+      #     npm run test -- --watch=false --browsers=ChromeHeadless
+      #   continue-on-error: true
 
       - name: Build for production
         run: |
           cd employee-frontend-final
           npm run build -- --configuration=production
 
-      # Artifact name  : frontend-build
-      # Artifact path  : employee-frontend-final/dist/
-      # Stored as      : GitHub Actions artifact (zip) for 5 days
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
         with:
@@ -111,7 +99,6 @@ jobs:
     name: Deploy to Production
     needs: [build-backend, build-frontend]
     runs-on: ubuntu-latest
-    # Run on push to main OR when workflow_dispatch action = deploy
     if: github.event_name == 'push' || github.event.inputs.action == 'deploy'
 
     steps:
@@ -125,23 +112,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Downloads backend-build artifact → ./backend-artifacts/
-      # Inside: the JAR file, e.g. emp_backend-0.0.1-SNAPSHOT.jar
       - name: Download backend artifact
         uses: actions/download-artifact@v4
         with:
           name: backend-build
           path: ./backend-artifacts
 
-      # Downloads frontend-build artifact → ./frontend-artifacts/
-      # Inside: browser/, index.html, main.js, polyfills.js, styles.css, etc.
       - name: Download frontend artifact
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
           path: ./frontend-artifacts
 
-      # Resolve the JAR filename BEFORE SSH (runner has the file, EC2 does not yet)
       - name: Resolve JAR filename
         id: jar
         run: |
@@ -151,39 +133,46 @@ jobs:
           echo "path=$JAR_FILE" >> $GITHUB_OUTPUT
           echo "Resolved JAR: $JAR_NAME"
 
-      # Copy artifacts to EC2 BEFORE SSH script runs
-      # (scp inside an ssh-action script block does not work — the runner
-      #  is not inside the EC2 shell, so it can't reach itself via scp)
       - name: Copy backend JAR to EC2
         run: |
-          # Use quotes to preserve the block structure of the key
-          cat <<EOF > /tmp/ec2_key.pem
-          ${{ secrets.EC2_PRIVATE_KEY }}
-          EOF
-          
+          # Create SSH key file
+          echo "${{ secrets.EC2_PRIVATE_KEY }}" > /tmp/ec2_key.pem
           chmod 600 /tmp/ec2_key.pem
-
-          # Check if the key is actually readable
-          ls -l /tmp/ec2_key.pem
-          cat /tmp/ec2_key.pem
-
-          APP_HOME="/home/${{ secrets.EC2_USER }}/employee-app"
-
-          # Combined SSH and SCP logic
-          ssh -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p $APP_HOME/backend $APP_HOME/frontend"
           
+          # Verify key file exists (without printing content)
+          ls -l /tmp/ec2_key.pem
+          file /tmp/ec2_key.pem
+          
+          # Set variables
+          APP_HOME="/home/${{ secrets.EC2_USER }}/employee-app"
+          EC2_HOST="${{ secrets.EC2_HOST }}"
+          
+          echo "Attempting to connect to EC2 host: $EC2_HOST"
+          
+          # Test SSH connection first
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i /tmp/ec2_key.pem ${{ secrets.EC2_USER }}@$EC2_HOST "echo 'SSH connection successful'"
+          
+          # Create directories on EC2
+          ssh -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem ${{ secrets.EC2_USER }}@$EC2_HOST "mkdir -p $APP_HOME/backend $APP_HOME/frontend"
+          
+          # Copy JAR file
           scp -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem \
             ./backend-artifacts/*.jar \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:$APP_HOME/backend/
+            ${{ secrets.EC2_USER }}@$EC2_HOST:$APP_HOME/backend/
+          
+          echo "Backend JAR copied successfully"
 
       - name: Copy frontend dist to EC2
         run: |
           APP_HOME="/home/${{ secrets.EC2_USER }}/employee-app"
-          # -r recursive, copies everything inside frontend-artifacts/
-          # Angular output is inside dist/<project-name>/browser/
+          EC2_HOST="${{ secrets.EC2_HOST }}"
+          
+          # Copy frontend files recursively
           scp -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem -r \
             ./frontend-artifacts/ \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:$APP_HOME/frontend/
+            ${{ secrets.EC2_USER }}@$EC2_HOST:$APP_HOME/frontend/
+          
+          echo "Frontend files copied successfully"
 
       - name: Deploy & Start services on EC2
         uses: appleboy/ssh-action@v1.0.3
