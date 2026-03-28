@@ -156,12 +156,19 @@ jobs:
       #  is not inside the EC2 shell, so it can't reach itself via scp)
       - name: Copy backend JAR to EC2
         run: |
-          echo "${{ secrets.EC2_PRIVATE_KEY }}" > /tmp/ec2_key.pem
+          # Write key using printf to preserve newlines correctly
+          printf '%s' "${{ secrets.EC2_PRIVATE_KEY }}" > /tmp/ec2_key.pem
           chmod 600 /tmp/ec2_key.pem
+
+          # Verify key loaded correctly before attempting connection
+          ssh-keygen -y -f /tmp/ec2_key.pem > /dev/null && echo "✅ Key is valid" || echo "❌ Key is invalid"
+
           APP_HOME="/home/${{ secrets.EC2_USER }}/employee-app"
+
           ssh -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
             "mkdir -p $APP_HOME/backend $APP_HOME/frontend"
+
           scp -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem \
             ${{ steps.jar.outputs.path }} \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:$APP_HOME/backend/${{ steps.jar.outputs.name }}
