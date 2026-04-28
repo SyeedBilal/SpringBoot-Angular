@@ -1,0 +1,10 @@
+# ============================================================
+# Namespace — isolates all app resources
+# ============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: employee-app
+  labels:
+    app.kubernetes.io/name: employee-management-system
+    app.kubernetes.io/managed-by: kubectl

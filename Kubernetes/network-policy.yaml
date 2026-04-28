@@ -1,0 +1,85 @@
+# ============================================================
+# NetworkPolicy — restrict inter-pod communication
+# ============================================================
+# MySQL: only allow traffic from backend pods
+# Backend: allow traffic from frontend pods and ingress
+# Frontend: allow traffic from ingress only
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mysql-network-policy
+  namespace: employee-app
+  labels:
+    app.kubernetes.io/name: employee-management-system
+    app.kubernetes.io/component: database
+spec:
+  podSelector:
+    matchLabels:
+      app: mysql
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - port: 3306
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-network-policy
+  namespace: employee-app
+  labels:
+    app.kubernetes.io/name: employee-management-system
+    app.kubernetes.io/component: backend
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow from frontend pods
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - port: 8080
+          protocol: TCP
+    # Allow from Ingress controller (typically in ingress-nginx namespace)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8080
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-network-policy
+  namespace: employee-app
+  labels:
+    app.kubernetes.io/name: employee-management-system
+    app.kubernetes.io/component: frontend
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow from Ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 80
+          protocol: TCP

@@ -1,0 +1,90 @@
+# ============================================================
+# Deployment — MySQL 8.0
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: employee-app
+  labels:
+    app.kubernetes.io/name: employee-management-system
+    app.kubernetes.io/component: database
+spec:
+  replicas: 1
+  # Recreate strategy prevents two MySQL instances writing to the same PVC
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+        app.kubernetes.io/name: employee-management-system
+        app.kubernetes.io/component: database
+    spec:
+      # Init container to fix volume permissions
+      initContainers:
+        - name: init-mysql
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R 999:999 /var/lib/mysql"]
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+              name: mysql
+              protocol: TCP
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-configmap
+                  key: MYSQL_DATABASE
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          # Liveness: restart if MySQL stops responding
+          livenessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - -h
+                - localhost
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          # Readiness: accept traffic only when MySQL is ready
+          readinessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - -h
+                - localhost
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc

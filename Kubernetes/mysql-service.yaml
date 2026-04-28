@@ -1,0 +1,20 @@
+# ============================================================
+# Service — MySQL (ClusterIP, internal only)
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: employee-app
+  labels:
+    app.kubernetes.io/name: employee-management-system
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+      protocol: TCP
+      name: mysql

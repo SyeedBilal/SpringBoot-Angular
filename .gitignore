@@ -10,6 +10,9 @@
 *.swo
 *~
 .DS_Store
+Terraform/
+implementation_plan.md
+walkthrough.md
 
 # Docker
 docker-compose.override.yml
@@ -17,3 +20,20 @@ docker-compose.override.yml
 # OS files
 Thumbs.db
 .DS_Store
+# Terraform
+terraform.tfstate*
+terraform.tfvars
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+
+# Sensitive data
+secrets.tfvars
+*.pem
+*.key
+
+# Local files
+*.log
+*.backup
+
+

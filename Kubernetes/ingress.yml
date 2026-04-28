@@ -1,0 +1,48 @@
+# ============================================================
+# Ingress — Route external traffic to frontend & backend
+# ============================================================
+# Prerequisites:
+#   - An Ingress Controller must be installed (e.g. nginx-ingress)
+#   - Update the host value below to match your domain or IP
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: employee-app-ingress
+  namespace: employee-app
+  labels:
+    app.kubernetes.io/name: employee-management-system
+    app.kubernetes.io/component: ingress
+  annotations:
+    # Nginx Ingress Controller annotations
+    # NOTE: rewrite-target removed — frontend Nginx handles /api/v1/ proxying
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    # Rate limiting (optional)
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+    # Enable CORS (optional)
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    # SSL redirect — uncomment when using TLS
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # Cert-manager — uncomment when using cert-manager for auto TLS
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  # Uncomment for TLS:
+  # tls:
+  #   - hosts:
+  #       - employee-app.example.com
+  #     secretName: employee-app-tls
+  rules:
+    # All traffic → frontend service (Nginx handles /api/v1/ proxying to backend)
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80

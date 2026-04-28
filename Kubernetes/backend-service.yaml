@@ -1,0 +1,20 @@
+# ============================================================
+# Service — Spring Boot Backend (ClusterIP)
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: employee-app
+  labels:
+    app.kubernetes.io/name: employee-management-system
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http

@@ -1,0 +1,15 @@
+# ============================================================
+# ConfigMap — non-sensitive MySQL + Spring Boot configuration
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-configmap
+  namespace: employee-app
+  labels:
+    app.kubernetes.io/name: employee-management-system
+    app.kubernetes.io/component: database
+data:
+  MYSQL_DATABASE: "employeedb"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-service:3306/employeedb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+  SPRING_PROFILES_ACTIVE: "prod"

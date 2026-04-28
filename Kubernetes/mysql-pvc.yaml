@@ -1,0 +1,19 @@
+# ============================================================
+# PersistentVolumeClaim — MySQL data storage
+# ============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: employee-app
+  labels:
+    app.kubernetes.io/name: employee-management-system
+    app.kubernetes.io/component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  # Uses the default StorageClass — override if needed:
+  # storageClassName: gp3
