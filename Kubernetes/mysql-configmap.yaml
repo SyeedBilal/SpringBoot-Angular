@@ -11,5 +11,5 @@ metadata:
     app.kubernetes.io/component: database
 data:
   MYSQL_DATABASE: "employeedb"
-  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-service:3306/employeedb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://<RDS_ENDPOINT>/employeedb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
   SPRING_PROFILES_ACTIVE: "prod"

@@ -10,7 +10,7 @@
 *.swo
 *~
 .DS_Store
-Terraform/
+
 implementation_plan.md
 walkthrough.md
 
@@ -35,5 +35,4 @@ secrets.tfvars
 # Local files
 *.log
 *.backup
-
 
