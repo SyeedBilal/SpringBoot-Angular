@@ -1,0 +1,58 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: emp-management-eks
+  region: ap-south-1
+  version: "1.31"            # Use latest stable EKS version
+  tags:
+    Project: emp-management
+    Environment: dev
+    ManagedBy: eksctl
+
+# ─── Import your Terraform VPC ───
+vpc:
+  id: "vpc-ID"        # ← from terraform output vpc_id
+  cidr: "10.0.0.0/16"
+  subnets:
+    public:
+      ap-south-1a:
+        id: "subnet-ID"  # ← public_subnet_ids[0]
+      ap-south-1b:
+        id: "subnet-ID"  # ← public_subnet_ids[1]
+    private:
+      ap-south-1a:
+        id: "subnet-ID"  # ← app_subnet_ids[0]
+      ap-south-1b:
+        id: "subnet-ID"  # ← app_subnet_ids[1]
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
+
+# ─── IAM OIDC Provider (required for IRSA — IAM Roles for Service Accounts) ───
+iam:
+  withOIDC: true
+
+# ─── Managed Node Group ───
+managedNodeGroups:
+  - name: app-nodes
+    instanceType: t3.medium     # 2 vCPU, 4 GB (good for dev)
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 4
+    volumeSize: 30
+    volumeType: gp3
+    privateNetworking: true     # Nodes in private app subnets
+    # Attach your Terraform node SG in addition to the EKS-managed SGs
+    securityGroups:
+      attachIDs:
+        - "sg-ID"       # ← sg_nodes_id from terraform output
+    labels:
+      role: app
+    tags:
+      Project: emp-management
+      Environment: dev
+    iam:
+      withAddonPolicies:
+        albIngress: true        # Adds ALB Ingress policy to node role
+        cloudWatch: true        # For Container Insights
